@@ -95,6 +95,137 @@ const lerpPath = (path1: Path, path2: Path, amount: number): string => {
     return result;
 };
 
+const makeAssembly = (font: Font, char: string): React.ReactNode => {
+    /**
+     * Steps:
+     *
+     * 1. Assemble all parts with all extenders removed and with connections
+     * overlapping by the maximum amount. This gives the smallest possible result.
+     *
+     * 2. Determine how much extra width/height can be obtained from all existing
+     * connections between neighboring parts by using minimal overlaps. If that
+     * is enough to achieve the size goal, extend each connection equally by
+     * changing overlaps of connectors to finish the job.
+     *
+     * 3. If all connections have been extended to the minimum overlap and further
+     * growth is needed, add one of each extender, and repeat the process from
+     * the first step.
+     */
+    const glyphID = font.getGlyphID(char);
+    const c = font.math.variants.getVertGlyphConstruction(glyphID);
+
+    const fontSize = 72;
+    const scale = fontSize / font.head.unitsPerEm;
+
+    const minConnectorOverlap = scale * font.math.variants.minConnectorOverlap;
+
+    console.log(c);
+    console.log(font.math.variants);
+
+    if (c?.glyphAssembly?.partRecords) {
+        const parts = c.glyphAssembly.partRecords;
+
+        const getSize = (extendCount: number): number => {
+            const extenderParts = parts.filter(
+                (part) => part.partsFlags & 0x0001,
+            );
+            const fixedParts = parts.filter(
+                (part) => !(part.partsFlags & 0x0001),
+            );
+
+            let sum = 0;
+            for (const part of fixedParts) {
+                sum += scale * part.fullAdvance;
+            }
+
+            for (let i = 0; i < extendCount; i++) {
+                for (const part of extenderParts) {
+                    sum += scale * part.fullAdvance;
+                }
+            }
+
+            return (
+                sum -
+                (fixedParts.length + extendCount * extenderParts.length - 1) *
+                    minConnectorOverlap
+            );
+        };
+
+        // glyphs are arrange from bottom to top
+
+        for (let i = 0; i < parts.length; i++) {
+            const height = scale * parts[i].fullAdvance;
+            console.log(`height = ${height}`);
+        }
+
+        let y = 550;
+        const extendCount = 0;
+        const paths = [];
+        for (let i = 0; i < parts.length; i++) {
+            const part = parts[i];
+            if (part.partsFlags === 0) {
+                paths.push(
+                    <path
+                        transform={`translate(150, ${y}) scale(${scale}, -${scale})`}
+                        d={getPath(font.getGlyph(parts[i].glyphID))}
+                    />,
+                );
+
+                let advance = scale * part.fullAdvance;
+                if (i !== parts.length - 1) {
+                    advance = advance - minConnectorOverlap;
+                }
+
+                y = y - advance;
+            } else if (part.partsFlags === 1 && extendCount > 0) {
+                /// pass
+            }
+        }
+
+        const height = 550 - y;
+        console.log(`height = ${height}`);
+
+        console.log(`extendCount = 0 - size = ${getSize(0)}`);
+        console.log(`extendCount = 1 - size = ${getSize(1)}`);
+        console.log(`extendCount = 2 - size = ${getSize(2)}`);
+        console.log(`extendCount = 3 - size = ${getSize(3)}`);
+        console.log(`extendCount = 4 - size = ${getSize(4)}`);
+
+        // TODO: compute a formula for the height max height based on the number
+        // of extensions there are, starting with 0.
+
+        // We subtract (n - 1) * minConnectorOverlap from the overall height of
+        // the assembly where `n` is the number of parts used.
+
+        // Steps:
+        // 1: loop through the parts and count the number of non-extension parts
+        // 2: compute the size of the assembly without extensions
+        // 3: compute the size of adding in one extension for each extension part
+        // 4:
+
+        // reverses the paint order
+        paths.reverse();
+
+        paths.push(
+            <path
+                transform={`translate(250, 500) scale(${scale}, -${scale})`}
+                d={getPath(font.getGlyph(parts[1].glyphID))}
+            />,
+        );
+
+        paths.push(
+            <path
+                transform={`translate(250, 400) scale(${scale}, -${scale})`}
+                d={getPath(font.getGlyph(parts[3].glyphID))}
+            />,
+        );
+
+        return <g>{paths}</g>;
+    } else {
+        return null;
+    }
+};
+
 const OpenTypeDemo: React.FC = () => {
     const [font, setFont] = React.useState<Font | null>(null);
 
@@ -214,29 +345,32 @@ const OpenTypeDemo: React.FC = () => {
         return (
             <svg viewBox="0 0 1024 1024" width={1024} height={1024}>
                 <g fill="currentcolor">
-                    <path
-                        transform={`translate(100, 150) scale(${scale}, -${scale})`}
-                        d={intPath}
-                    />
-                    <path
-                        transform={`translate(150, 150) scale(${scale}, -${scale})`}
-                        d={getPath(font.getGlyph(3354))}
-                    />
-                    <path
-                        transform={`translate(200, 150) scale(${scale}, -${scale})`}
-                        d={getPath(font.getGlyph(3329))}
-                    />
-                    <path
-                        transform={`translate(250, 150)  scale(${scale}, -${scale})`}
-                        d={getPath(font.getGlyph(1679))}
-                    />
-                    <g fill="blue" transform="translate(15, 512)">
-                        {children}
+                    {makeAssembly(font, "}")}
+                    <g style={{visibility: "hidden"}}>
+                        <path
+                            transform={`translate(100, 150) scale(${scale}, -${scale})`}
+                            d={intPath}
+                        />
+                        <path
+                            transform={`translate(150, 150) scale(${scale}, -${scale})`}
+                            d={getPath(font.getGlyph(3354))}
+                        />
+                        <path
+                            transform={`translate(200, 150) scale(${scale}, -${scale})`}
+                            d={getPath(font.getGlyph(3329))}
+                        />
+                        <path
+                            transform={`translate(250, 150)  scale(${scale}, -${scale})`}
+                            d={getPath(font.getGlyph(1679))}
+                        />
+                        <g fill="blue" transform="translate(15, 512)">
+                            {children}
+                        </g>
+                        <g fill="red" transform="translate(30, 512)">
+                            {lerpChildren}
+                        </g>
+                        <g transform="translate(15, 800)">{surdChildren}</g>
                     </g>
-                    <g fill="red" transform="translate(30, 512)">
-                        {lerpChildren}
-                    </g>
-                    <g transform="translate(15, 800)">{surdChildren}</g>
                     <path
                         transform={`translate(500, 1000) scale(${scale}, -${scale})`}
                         d={getPath(font.getGlyph(1661))}
@@ -250,26 +384,28 @@ const OpenTypeDemo: React.FC = () => {
                         d={getPath(font.getGlyph(1664))}
                     />
                     {/* uni221A.var is a variant for sqrt without overbar */}
-                    <path
-                        transform={`translate(600, 1000) scale(${scale}, -${scale})`}
-                        d={getPath(font.getGlyph(1663))}
-                    />
-                    <rect
-                        x={150 + metrics.bearingX}
-                        // bearingY is the distance up from the origin, but SVG
-                        // has the y-axis pointing down whereas fonts have the
-                        // y-axis pointing up.
-                        y={200 - metrics.bearingY}
-                        width={metrics.width}
-                        height={metrics.height}
-                        fill="transparent"
-                        stroke="orange"
-                    />
-                    <path
-                        transform={`translate(150, 200) scale(${scale}, ${-scale})`}
-                        d={parenPath}
-                    />
-                    <ellipse cx={150} cy={200} rx={3} ry={3} fill="blue" />
+                    <g style={{visibility: "hidden"}}>
+                        <path
+                            transform={`translate(600, 1000) scale(${scale}, -${scale})`}
+                            d={getPath(font.getGlyph(1663))}
+                        />
+                        <rect
+                            x={150 + metrics.bearingX}
+                            // bearingY is the distance up from the origin, but SVG
+                            // has the y-axis pointing down whereas fonts have the
+                            // y-axis pointing up.
+                            y={200 - metrics.bearingY}
+                            width={metrics.width}
+                            height={metrics.height}
+                            fill="transparent"
+                            stroke="orange"
+                        />
+                        <path
+                            transform={`translate(150, 200) scale(${scale}, ${-scale})`}
+                            d={parenPath}
+                        />
+                        <ellipse cx={150} cy={200} rx={3} ry={3} fill="blue" />
+                    </g>
                 </g>
             </svg>
         );
