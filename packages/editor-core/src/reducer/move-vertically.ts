@@ -15,11 +15,10 @@ export const moveVertically = (
     const {breadcrumbs} = state.zipper;
     const crumb = breadcrumbs[breadcrumbs.length - 1];
     if (crumb?.focus.type === "ztable") {
-        if (crumb.focus.subtype === "algebra" && direction === "up") {
-            const newState = verticalWork(state, direction);
-            if (newState !== state) {
-                return newState;
-            }
+        if (crumb.focus.subtype === "algebra") {
+            // We defer to 'verticalWork' to handle vertical navigation for
+            // 'algebra' tables.
+            return verticalWork(state, direction);
         }
         const {colCount, rowCount, left, right} = crumb.focus;
 
@@ -62,7 +61,7 @@ export const moveVertically = (
         }
 
         if (!focusedChild) {
-            return verticalWork(state, direction);
+            throw new Error("focusedChild should always be defined here");
         }
 
         // TODO: determine cursorIndex based on column alignment, e.g. if

@@ -59,9 +59,7 @@ export const typesetTable = (
     const childContext = childContextForTable(context);
 
     const gutterWidth: number =
-        typeof node.gutterWidth === "undefined"
-            ? DEFAULT_GUTTER_WIDTH
-            : node.gutterWidth;
+        node.subtype === "algebra" ? 0 : DEFAULT_GUTTER_WIDTH;
 
     const children =
         node.type === "table"
@@ -177,28 +175,22 @@ export const typesetTable = (
         const col = cursorIndex % node.colCount;
         const zrow = zipper?.row;
 
-        // We don't want to add padding to cells in a column if the current
-        // cell is empty and there's another cell that isn't empty.
-        let canAddPadding = true;
-        if (node.rowCount > 2) {
-            const child1 = children[1 * node.colCount + col];
-            const child2 = children[2 * node.colCount + col];
-            const length1 = child1?.children?.length ?? 0;
-            const length2 = child2?.children?.length ?? 0;
-            if (length1 !== length2 && length1 * length2 === 0) {
-                const row = Math.floor(cursorIndex / node.colCount);
-                if (row === 1 && length1 === 0) {
-                    canAddPadding = false;
-                }
-                if (row === 2 && length2 === 0) {
-                    canAddPadding = false;
-                }
+        type Column = readonly Editor.types.Row[];
+        const cellColumns: Column[] = [];
+        for (let i = 0; i < node.colCount; i++) {
+            const col: Editor.types.Row[] = [];
+            for (let j = 0; j < node.rowCount; j++) {
+                const index = j * node.colCount + i;
+                // TODO: check that children[index] isn't null
+                col.push(children[index] as Editor.types.Row);
             }
+            cellColumns.push(col); // this is unsafe
         }
 
-        if (zrow && canAddPadding) {
+        if (zrow) {
             if (
-                isCellEqualSign(topRowChildren[col + 1]) &&
+                col < cellColumns.length - 1 &&
+                cellColumns[col + 1].some(isCellEqualSign) &&
                 zrow.left.length === 0
             ) {
                 // Add left padding on every cell in the row except the first
@@ -217,7 +209,8 @@ export const typesetTable = (
                     );
                 }
             } else if (
-                isCellEqualSign(topRowChildren[col - 1]) &&
+                col > 0 &&
+                cellColumns[col - 1].some(isCellEqualSign) &&
                 zrow.right.length === 0
             ) {
                 // Add right padding on every cell in the row except the first
@@ -236,8 +229,10 @@ export const typesetTable = (
                     );
                 }
             } else if (
-                isCellPlusMinus(topRowChildren[col + 1]) &&
-                zrow.left.length === 0
+                col < cellColumns.length - 1 &&
+                cellColumns[col + 1].some(isCellPlusMinus) &&
+                Editor.isColumnEmpty(cellColumns[col])
+                // zrow.left.length === 0 && zrow.right.length === 0
             ) {
                 // Add left padding on every cell in the row except the first
                 for (let row = 1; row < node.rowCount; row++) {

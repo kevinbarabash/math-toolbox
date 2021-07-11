@@ -15,6 +15,11 @@ export {
 } from "./reducer/convert";
 export {stateFromZipper} from "./reducer/test-util";
 export {zrowToRow, zrow, nodeToFocus} from "./reducer/util";
+export {
+    zipperToVerticalWork,
+    isColumnEmpty,
+    isCellEmpty,
+} from "./reducer/vertical-work-utils";
 export type {
     Breadcrumb,
     BreadcrumbRow,

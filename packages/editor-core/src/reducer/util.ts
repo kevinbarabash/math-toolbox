@@ -46,9 +46,6 @@ export const zfrac = (node: types.Frac, index: 0 | 1): ZFrac => {
           };
 };
 
-const nums: readonly number[] = [1, 2, 3];
-console.log(nums);
-
 export const subsup = (
     focus: ZSubSup,
     replacement: types.Row,
@@ -170,7 +167,6 @@ export const table = (focus: ZTable, replacement: types.Row): types.Table => {
         rowStyles: focus.rowStyles,
         colStyles: focus.colStyles,
         delimiters: focus.delimiters,
-        gutterWidth: focus.gutterWidth,
         children: [...focus.left, replacement, ...focus.right],
         style: focus.style,
     };
@@ -186,7 +182,6 @@ export const ztable = (node: types.Table, index: number): ZTable => {
         rowStyles: node.rowStyles,
         colStyles: node.colStyles,
         delimiters: node.delimiters,
-        gutterWidth: node.gutterWidth,
         left: node.children.slice(0, index),
         right: node.children.slice(index + 1),
         style: node.style,

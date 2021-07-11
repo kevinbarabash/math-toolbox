@@ -15,7 +15,7 @@ export type Delimited<A, C> = C & {
     readonly rightDelim: Atom<A, C>;
 };
 
-type RowStyle = {
+export type RowStyle = {
     readonly border?: "top" | "bottom";
     readonly alignment?: "top" | "middle" | "bottom";
 };
@@ -31,7 +31,6 @@ export type Table<A, C> = C & {
     readonly children: readonly (Row<A, C> | null)[];
     readonly rowCount: number;
     readonly colCount: number;
-    readonly gutterWidth?: number;
     // How do we limit what can be used as a delimiter?s
     readonly delimiters?: {
         readonly left: Atom<A, C>;
